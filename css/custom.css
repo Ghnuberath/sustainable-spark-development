@@ -1,0 +1,20 @@
+strong {
+  color: rgb(95, 197, 215);
+}
+
+.reveal section img {
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.presentation-code {
+  box-shadow: none !important;
+  tab-size: 2 !important;
+}
+
+.reveal pre {
+  margin:0;
+  margin-top: 10px;
+  width: 100%;
+}

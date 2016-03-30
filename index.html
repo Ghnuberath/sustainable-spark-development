@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+
+    <title>Introducing Apache Spark</title>
+
+    <meta name="description" content="Introducing fundamental Apache Spark concepts through diagrams, examples and use cases.">
+    <meta name="author" content="Sean McIntyre">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+    <!-- Code syntax highlighting -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="css/custom.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+
+    <!--[if lt IE 9]>
+    <script src="lib/js/html5shiv.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <div class="reveal">
+
+      <!-- Any section element inside of this container is displayed as a slide -->
+      <div class="slides">
+        <section data-transition="convex">
+          <h1>Sustainable Spark Development</h1>
+          <p>
+            Sean McIntyre<br/>
+            <small>Software Architect</small>
+          </p>
+          <img src="images/uncharted-logo.png" width="350">
+        </section>
+        <section data-transition="convex">
+          <section>
+            <h2>The Problem</h2>
+          </section>
+          <section>
+            <p>Uncharted in a nutshell:</p>
+            <ul>
+              <li>Data Science</li>
+              <li>Machine Learning</li>
+              <li>Data cleaning and enrichment</li>
+              <li><strong>Custom visual analytics software</strong></li>
+            </ul>
+            <p class="fragment">
+              <em>Visualization</em> is a broad term these days, and it often involves a lot of data processing to create something useful.
+            </p>
+          </section>
+          <section>
+            <p>From a different perspective:</p>
+            <ul>
+              <li>Data Scientists</li>
+              <li>Computer Scientists</li>
+              <li>Software Engineers</li>
+              <li>Dev Ops</li>
+              <li>...and many more</li>
+            </ul>
+            <p class="fragment">Developing big, data-driven applications involves all of these folks!</p>
+          </section>
+          <section>
+            <aside class="notes">
+              Despite your best intentions...
+            </aside>
+            <h3>
+              The informal workflow<br />
+              <small class="fragment">i.e. "what always happens"</small>
+            </h3>
+            <ol>
+              <li class="fragment">Data collection <em>(Dev Ops/Engineers)</em></li>
+              <li class="fragment">Exploratory data analysis <em>(Data scientist)</em></li>
+              <li class="fragment">Application development <em>(Engineers)</em></li>
+              <li class="fragment">Algorithm optimization <em>(Data/computer scientists)</em></li>
+              <li class="fragment">Deployment/Scaling <em>(Engineers/Dev Ops)</em></li>
+            </ol>
+          </section>
+          <section>
+            <h3>Issues:</h3>
+            <ul>
+              <li class="fragment">Everyone ends up touching Spark</li>
+              <li class="fragment">Spark is hard to learn, and hard to use correctly</li>
+              <li class="fragment">Scripts written for data analysis are productionized due to time constraints</li>
+              <li class="fragment">Scripts are not sufficiently modular to re-use. Wheel reinventing ensues.</li>
+            </ul>
+            <p class="fragment">It became clear very quickly that this process is not <em>sustainable</em>.</p>
+          </section>
+        </section>
+        <section data-transition="convex">
+          <section>
+            <h2>What is Sustainability?</h2>
+          </section>
+          <section>
+            <h3>Priorities:</h3>
+            <ul>
+              <li class="fragment">Retain the productivity/flexibility afforded by scripting</li>
+              <li class="fragment">Balance with the need for modularity</li>
+              <li class="fragment">Promote code reuse and composability<br/><small>"Hey, how did you parse that twitter data?"</small></li>
+              <li class="fragment">Reduce barriers to entry for new team members<br /><small>people shouldn't have to be Spark experts to write efficient code</small></li>
+            </ul>
+          </section>
+        </section>
+        <section data-transition="convex">
+          <section>
+            <h2>The Solution</h2>
+          </section>
+          <section>
+            <p>
+              Sparkpipe!
+            </p>
+            <pre class="presentation-code fragment">
+              <code class="sh" data-trim>
+$ ./spark-shell \
+  --packages software.uncharted.sparkpipe:sparkpipe-core:0.9.7
+              </code>
+            </pre>
+          </section>
+          <section>
+            <pre class="presentation-code">
+              <code class="scala" data-trim>
+// import data
+val df = sqlContext.read
+  .format("json")
+  .load("tweets.json.gz")
+
+// add column containing words from tweet text
+import scala.reflect.runtime.universe._
+import org.apache.spark.sql.Column
+val wordsColumn = udf {
+	(text: String) => text.trim.split("\\s+?")
+}(typeTag[Array[String]], typeTag[String])(new Column("text"))
+val df2 = df.withColumn("tweet_words", wordsColumn)
+
+// do other things (if you're not in tears)
+              </code>
+            </pre>
+            <p>There are things which are unintuitive in the Spark API</p>
+          </section>
+					<section>
+						<pre class="presentation-code">
+              <code class="scala" data-trim>
+import software.uncharted.sparkpipe.Pipe
+import software.uncharted.sparkpipe.ops.core.{dataframe => dfo}
+
+val ingest = Pipe(sqlContext)
+.to(dfo.io.read(format = "json", path = "tweets.json.gz"))
+.to(dfo.addColumn(
+	"tweet_words",
+	(text: String) => text.trim.split("\\s+?"),
+	"text"
+))
+val df = ingest.run
+							</code>
+						</pre>
+						<p>Sparkpipe aims to make them simpler and more semantically clear</p>
+					</section>
+					<section>
+						<pre class="presentation-code">
+              <code class="scala" data-trim>
+import software.uncharted.sparkpipe.Pipe
+import software.uncharted.sparkpipe.ops.community.{twitter => twops}
+
+val ingest = Pipe(sqlContext)
+.to(twops.io.read(format = "json", path = "tweets.json.gz"))
+.to(twops.tweet.hashtags("tweet_hashtags"))
+
+val df = ingest.run
+							</code>
+						</pre>
+						<p>more importantly, we want to reduce boilerplate<br /> in domain-specific situations</p>
+					</section>
+					<section>
+						<p>
+							The <strong>operation</strong> becomes the single modular unit that developers and data scientists can agree on.
+						</p>
+						<pre class="presentation-code">
+              <code class="scala" data-trim>
+// operations are just simple scala functions!
+def myOperation(arg1: String, arg2: Int)(input: DataFrame): DataFrame = {
+  /* do something */
+}
+							</code>
+						</pre>
+						<p class="fragment">
+							They should each do one thing, and do it well<br />(with well-defined inputs and outputs)
+							<br /><small>&copy;UNIX :)</small>
+						</p>
+						<aside class="notes">
+							And frankly, even if one doesn't do something well, it means the problem is isolated and can be fixed without breaking the agreed-upon interface.
+						</aside>
+					</section>
+					<section>
+						<h3>Advantages for Uncharted</h3>
+						<ul>
+							<li class="fragment">Pipelines are highly scriptable!</li>
+							<li class="fragment">Isolation from changes in the underlying Spark API <br /><small>(i.e. RDD -> DataFrame -> Dataset)</small></li>
+							<li class="fragment">Hide the uglier parts of Spark</li>
+							<li class="fragment">Pipelines separate scripts into modular, reusable bits without adding too much overhead</li>
+							<li class="fragment">Productionize scripts, optimize later</li>
+							<li class="fragment">Simple DSL encourages a specific format for functions, and separates structure from implementation details</li>
+						</ul>
+					</section>
+					<section>
+						<p>Separating structure from implementation details:</p>
+						<pre class="presentation-code">
+							<code class="scala" data-trim>
+// linear
+val ingest = Pipe().to().to().to()
+// branch
+val analysis1 = pipe.to(something).to(somethingElse)
+val analysis2 = pipe.to(anotherOp)
+// merge
+val output = Pipe(analysis1, analysis2).to(outputOp)
+//non-linear pipelines are cool!
+							</code>
+						</pre>
+						<p class="fragment">
+							This makes even complex scripts <strong>easier to parse and share</strong> than the corresponding raw Spark code.
+						</p>
+					</section>
+        </section>
+				<section data-transition="convex">
+					<section>
+						<h2>Bottom Line</h2>
+					</section>
+					<section>
+						<p>
+							We're not trying to replace the underlying Spark API, so you generally won't find ops that wrap simple things like <code>select()</code>.
+						</p>
+						<p class="fragment">
+							In particular, we're not trying to replace the SparkML <code>Pipeline</code>, though we do have ops for using it with Sparkpipe.
+						</p>
+					</section>
+					<section>
+						<p>We've released <code>sparkpipe-core</code> as open source, and it's available now from Maven central.</p>
+						<p class="fragment">
+							We're also hard at work on domain-specific libraries which will also be open source.
+						</p>
+						<ul class="fragment">
+							<li><code>sparkpipe-twitter-ops</code></li>
+							<li><code>sparkpipe-instagram-ops</code></li>
+							<li><code>sparkpipe-gdelt-ops</code></li>
+							<li><code>sparkpipe-salt-ops</code> <em>(visualization)</em></li>
+							<li>etc.</li>
+						</ul>
+					</section>
+					<section>
+						<h3>But I need your help!</h3>
+						<p class="fragment">Creating <code>sparkpipe</code> has helped improve the productivity of developers within my company.</p>
+						<p class="fragment">But it would be even more powerful if a community of domain-specific libraries developed around it!</p>
+						<aside class="notes">
+							So, if you like what you see, get cracking!
+						</aside>
+					</section>
+					<section>
+						<h2>Mo data? <span class="fragment">No problems.</span></h2>
+					</section>
+				</section>
+      </div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+
+        transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: 'plugin/zoom-js/zoom.js', async: true },
+          { src: 'plugin/notes/notes.js', async: true }
+        ]
+      });
+
+    </script>
+
+  </body>
+</html>
