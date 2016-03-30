@@ -246,7 +246,17 @@ val output = Pipe(analysis1, analysis2).to(outputOp)
 						<p>
 							We're not trying to replace the underlying Spark API, so you generally won't find ops that wrap simple things like <code>select()</code>.
 						</p>
-						<p class="fragment">
+						<pre class="presentation-code">
+							<code class="scala" data-trim>
+Pipe(sqlContext)
+.to(twops.io.read(format = "json", path = "tweets.json.gz"))
+.to(_.select("text")) //you can use scala inlines anytime you want!
+.run
+							</code>
+						</pre>
+					</section>
+					<section>
+						<p>
 							In particular, we're not trying to replace the SparkML <code>Pipeline</code>, though we do have ops for using it with Sparkpipe.
 						</p>
 					</section>
