@@ -224,7 +224,7 @@ def myOperation(arg1: String, arg2: Int)(input: DataFrame): DataFrame = {
 						<pre class="presentation-code">
 							<code class="scala" data-trim>
 // linear
-val ingest = Pipe().to().to().to()
+val ingest = Pipe(red).to(blue).to(green).to(yellow)
 // branch
 val analysis1 = pipe.to(something).to(somethingElse)
 val analysis2 = pipe.to(anotherOp)
